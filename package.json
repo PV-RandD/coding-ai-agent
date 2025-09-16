@@ -1,0 +1,61 @@
+{
+  "name": "llm-desktop-app",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron .",
+    "dev": "concurrently \"npm run dev:renderer\" \"npm run dev:electron\"",
+    "dev:renderer": "cd renderer && npm run dev",
+    "dev:electron": "wait-on http://localhost:5173 && electronmon .",
+    "build:ui": "cd renderer && npm ci --no-audit --no-fund && npm run build",
+    "build": "npm run build:ui && electron-builder"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.12",
+    "electronmon": "^2.0.3",
+    "wait-on": "^8.0.4"
+  },
+  "electronmon": {
+    "pattern": [
+      "!renderer",
+      "!renderer/**/*"
+    ]
+  },
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "mongoose": "^8.18.1",
+    "openai": "^5.20.0"
+  },
+  "build": {
+    "appId": "com.llm-desktop.app",
+    "productName": "LLM Desktop",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*"
+    ],
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    }
+  }
+}

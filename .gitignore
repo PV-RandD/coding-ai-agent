@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Builds / Bundles
+.dist/
+dist/
+build/
+release/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+
+# Env and secrets
+.env
+.env.*
+*.local
+
+# Testing / Coverage
+coverage/
+
+# Caches
+.cache/
+.parcel-cache/
+.turbo/
+.eslintcache
+
+# Framework outputs
+.next/
+out/
+.vercel/
+
+# Temp
+.tmp/
+tmp/
+temp/
