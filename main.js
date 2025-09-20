@@ -79,7 +79,7 @@ ipcMain.handle("run-command", async (_event, payload) => {
   return new Promise((resolve) => {
     exec(
       actualCmd,
-      { shell: "/bin/zsh", cwd: cwd && typeof cwd === "string" ? cwd : undefined },
+      { shell: "/bin/bash", cwd: cwd && typeof cwd === "string" ? cwd : undefined },
       (error, stdout, stderr) => {
         resolve({
           ok: !error,
@@ -202,7 +202,8 @@ ipcMain.handle("search-index", async (_event, query) => {
 // Start Express API server inside Electron main
 async function startApiServer() {
   const { createApiServer } = require("./server/api");
-  const api = createApiServer();
+  console.log("Initializing API server with QVAC client...");
+  const api = await createApiServer();
   const port = process.env.PORT || 8787;
   api.listen(port, () => {
     console.log(`[API] Listening on http://localhost:${port}`);
