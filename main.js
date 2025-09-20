@@ -71,18 +71,25 @@ app.whenReady().then(() => {
   createWindow();
 });
 
-// IPC: run shell command
-ipcMain.handle("run-command", async (_event, command) => {
+// IPC: run shell command (optionally in a provided cwd)
+ipcMain.handle("run-command", async (_event, payload) => {
+  const { cmd, command, cwd } =
+    typeof payload === "string" ? { command: payload } : payload || {};
+  const actualCmd = typeof command === "string" ? command : typeof cmd === "string" ? cmd : "";
   return new Promise((resolve) => {
-    exec(command, { shell: "/bin/zsh" }, (error, stdout, stderr) => {
-      resolve({
-        ok: !error,
-        code: error ? error.code : 0,
-        stdout,
-        stderr,
-        error: error ? String(error) : null,
-      });
-    });
+    exec(
+      actualCmd,
+      { shell: "/bin/zsh", cwd: cwd && typeof cwd === "string" ? cwd : undefined },
+      (error, stdout, stderr) => {
+        resolve({
+          ok: !error,
+          code: error ? error.code : 0,
+          stdout,
+          stderr,
+          error: error ? String(error) : null,
+        });
+      }
+    );
   });
 });
 

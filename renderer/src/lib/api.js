@@ -14,6 +14,35 @@ function buildHeaders(extra = {}) {
 
 async function parseJsonOrThrow(res) {
   const contentType = res.headers.get("content-type") || "";
+
+  // Try to parse JSON if possible
+  const parseJsonSafe = async () => {
+    try {
+      if (contentType.includes("application/json")) {
+        return await res.json();
+      }
+    } catch {
+      /* fallthrough */
+    }
+    return null;
+  };
+
+  if (!res.ok) {
+    const json = await parseJsonSafe();
+    const serverMsg = json?.error || json?.message || null;
+    let textSnippet = "";
+    if (!serverMsg) {
+      try {
+        const t = await res.text();
+        textSnippet = t.slice(0, 200);
+      } catch {
+        /* ignore */
+      }
+    }
+    const msg = serverMsg || textSnippet || res.statusText || "Request failed";
+    throw new Error(`${res.status} ${msg}`);
+  }
+
   if (!contentType.includes("application/json")) {
     const text = await res.text();
     throw new Error(`Non-JSON response (${res.status}): ${text.slice(0, 200)}`);
@@ -38,13 +67,25 @@ export async function runScript(id) {
   return parseJsonOrThrow(res);
 }
 
+export async function stopScript(id) {
+  const res = await fetch(`${BASE_URL}/api/scripts/${id}/stop`, {
+    method: "POST",
+  });
+  return parseJsonOrThrow(res);
+}
+
+export async function getScriptLog(id) {
+  const res = await fetch(`${BASE_URL}/api/scripts/${id}/log`);
+  if (!res.ok) return "";
+  return res.text();
+}
+
 export async function saveScript(id, code) {
   const res = await fetch(`${BASE_URL}/api/scripts/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...buildHeaders() },
     body: JSON.stringify({ code }),
   });
-  if (!res.ok) throw new Error("Save failed");
   return parseJsonOrThrow(res);
 }
 

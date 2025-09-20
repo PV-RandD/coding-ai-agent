@@ -13,6 +13,9 @@ export default function TerminalPane({
   termHistory,
   setTermHistory,
   setTermHistIdx,
+  cwd,
+  isRunning,
+  onStop,
 }) {
   return (
     <div className="terminal-container w-full">
@@ -39,6 +42,15 @@ export default function TerminalPane({
           </button>
         </div>
         <div className="terminal-actions">
+          {activeTermTab === "output" && isRunning && (
+            <button
+              className="tbtn-icon"
+              title="Stop current execution"
+              onClick={onStop}
+            >
+              ■
+            </button>
+          )}
           <button
             className="tbtn-icon"
             title="Clear"
@@ -92,7 +104,7 @@ export default function TerminalPane({
                       setTermHistory((h) => [...h, cmd]);
                       setTermHistIdx(-1);
                       setTermCmd("");
-                      const r = await window.api.runCommand(cmd);
+                      const r = await window.api.runCommand({ command: cmd, cwd });
                       const out =
                         (r.stdout || "") +
                           (r.stderr ? (r.stdout ? "\n" : "") + r.stderr : "") ||

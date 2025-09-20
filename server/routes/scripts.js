@@ -20,6 +20,9 @@ const {
 
 function scriptsRouter({ openaiClient }) {
   const router = express.Router();
+  // Track running child processes by script id
+  const running = new Map(); // id -> child_process
+  const logFiles = new Map(); // id -> logFilePath
 
   router.post("/", async (req, res) => {
     try {
@@ -51,6 +54,22 @@ function scriptsRouter({ openaiClient }) {
         ],
         temperature: 0.2,
       });
+
+  // Get live or final logs for a script run
+  router.get("/:id/log", async (req, res) => {
+    try {
+      const id = req.params.id;
+      const p = logFiles.get(id) || path.join(getStorageDir() || "", ".logs", `${id}.log`);
+      if (!p || !fs.existsSync(p)) {
+        res.status(200).type("text/plain").send("");
+        return;
+      }
+      const content = fs.readFileSync(p, "utf8");
+      res.status(200).type("text/plain").send(content);
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
       const content = completion.choices?.[0]?.message?.content || "";
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (!jsonMatch)
@@ -172,7 +191,7 @@ function scriptsRouter({ openaiClient }) {
       const idx = loadIndex();
       const item = (idx.scripts || []).find((s) => s.id === req.params.id);
       if (!item) return res.status(404).json({ error: "Not found" });
-      const { exec } = require("child_process");
+      const { spawn } = require("child_process");
       const filePath = item.filePath;
       const lower = (item.name || "").toLowerCase();
       let command = "";
@@ -199,10 +218,38 @@ function scriptsRouter({ openaiClient }) {
       else if (lower.endsWith(".rs"))
         command = `rustc "${filePath}" -o "${filePath}.out" && "${filePath}.out"`;
       else command = `bash "${filePath}"`;
-      exec(command, { shell: "/bin/zsh" }, (error, stdout, stderr) => {
+      // Use spawn with zsh to allow kill/stop control
+      const child = spawn(command, { shell: "/bin/zsh" });
+      running.set(item.id, child);
+      // Prepare log file
+      const logsDir = path.join(getStorageDir(), ".logs");
+      try { fs.mkdirSync(logsDir, { recursive: true }); } catch {}
+      const logPath = path.join(logsDir, `${item.id}.log`);
+      try { fs.writeFileSync(logPath, "", "utf8"); } catch {}
+      logFiles.set(item.id, logPath);
+
+      let stdout = "";
+      let stderr = "";
+      child.stdout.on("data", (d) => {
+        const s = d.toString();
+        stdout += s;
+        try { fs.appendFileSync(logPath, s); } catch {}
+      });
+      child.stderr.on("data", (d) => {
+        const s = d.toString();
+        stderr += s;
+        try { fs.appendFileSync(logPath, s); } catch {}
+      });
+      child.on("error", (e) => {
+        stderr += `\n${String(e)}`;
+      });
+      child.on("close", (code, signal) => {
+        running.delete(item.id);
+        // finalize log with newline
+        try { fs.appendFileSync(logPath, "\n"); } catch {}
         const suggestions = [];
-        const err = String(stderr || (error ? error.message : ""));
-        if (error) {
+        const err = String(stderr || "");
+        if (code !== 0 || signal) {
           if (/not found|command not found/i.test(err))
             suggestions.push("Install missing dependency or check PATH.");
           if (/permission denied/i.test(err))
@@ -215,15 +262,41 @@ function scriptsRouter({ openaiClient }) {
             );
           if (lower.endsWith(".py") && /module not found/i.test(err))
             suggestions.push("Install required Python packages with pip.");
+          if (signal) {
+            suggestions.push(`Process stopped (signal ${signal}).`);
+          }
         }
         res.json({
-          ok: !error,
-          code: error ? error.code : 0,
+          ok: code === 0 && !signal,
+          code: code ?? 0,
           stdout,
           stderr,
           suggestions,
         });
       });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // Stop a running script by id
+  router.post("/:id/stop", async (req, res) => {
+    try {
+      const id = req.params.id;
+      const child = running.get(id);
+      if (!child) return res.json({ ok: false, message: "No running process" });
+      let stopped = false;
+      try {
+        child.kill("SIGTERM");
+        stopped = true;
+      } catch {}
+      // Fallback: SIGKILL after short delay
+      setTimeout(() => {
+        if (!child.killed) {
+          try { child.kill("SIGKILL"); } catch {}
+        }
+      }, 1000);
+      return res.json({ ok: true, stopped });
     } catch (e) {
       res.status(500).json({ error: String(e) });
     }
