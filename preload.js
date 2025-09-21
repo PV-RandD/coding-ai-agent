@@ -10,4 +10,11 @@ contextBridge.exposeInMainWorld("api", {
   searchIndex: (query) => ipcRenderer.invoke("search-index", query),
   selectStorageDir: () => ipcRenderer.invoke("select-storage-dir"),
   getStorageDir: () => ipcRenderer.invoke("get-storage-dir"),
+  // QVAC related APIs
+  getQvacStatus: () => ipcRenderer.invoke("get-qvac-status"),
+  onQvacStatusChange: (callback) => {
+    ipcRenderer.on("qvac-status-changed", callback);
+    // Return cleanup function
+    return () => ipcRenderer.removeListener("qvac-status-changed", callback);
+  },
 });
