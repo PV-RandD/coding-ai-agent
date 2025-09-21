@@ -24,25 +24,11 @@ A powerful cross-platform Electron desktop application that combines local AI in
 
 ### Install dependencies
 
-- Root dependencies:
-
 ```bash
-npm install
-```
-
-- Renderer dependencies:
-
-```bash
-cd renderer && npm install
+npm run setup
 ```
 
 ### Development
-
-Go back to the parent forlder:
-
-```bash
-cd ..
-```
 
 Start the React dev server and Electron together:
 
