@@ -5,7 +5,6 @@ import AskToolbar from "./components/AskToolbar";
 import FileBar from "./components/FileBar";
 import EditorPane from "./components/EditorPane";
 import TerminalPane from "./components/TerminalPane";
-import SettingsModal from "./components/SettingsModal";
 import {
   listScripts,
   getScript,
@@ -33,7 +32,6 @@ function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [askText, setAskText] = useState("");
   const [aiMessage, setAiMessage] = useState("");
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
 
   // Terminal state
@@ -161,13 +159,6 @@ function App() {
     fetchList();
   }, [fetchList]);
 
-  useEffect(() => {
-    function onOpenSettings() {
-      setSettingsOpen(true);
-    }
-    window.addEventListener("open-settings", onOpenSettings);
-    return () => window.removeEventListener("open-settings", onOpenSettings);
-  }, []);
 
   // Focus terminal input when switching to Terminal tab and panel is visible
   useEffect(() => {
@@ -384,6 +375,7 @@ function App() {
                 try {
                   await saveScript(selected._id, editableCode);
                   await fetchOne(selected._id);
+                  showToast("File saved successfully!", "success", 2000);
                 } catch (e) {
                   setError(String(e));
                   showToast(`Save failed: ${String(e)}`, "error", 4000);
@@ -438,10 +430,6 @@ function App() {
             setIsRunning(false);
           }
         }}
-      />
-      <SettingsModal
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
       />
     </div>
   );
