@@ -22,6 +22,13 @@ A powerful cross-platform Electron desktop application that combines local AI in
     [Install Rust](https://www.rust-lang.org/tools/install) | [Rust Setup Guide](https://doc.rust-lang.org/book/ch01-01-installation.html)  
     [Install Java](https://adoptium.net/) | [Java Setup Guide](https://docs.oracle.com/en/java/javase/17/install/overview-jdk-installation.html)
 
+### Clone the repository
+
+```bash
+git clone https://github.com/your-username/coding-ai-agent.git
+cd coding-ai-agent
+```
+
 ### Install dependencies
 
 ```bash
