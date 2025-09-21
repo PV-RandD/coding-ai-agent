@@ -199,26 +199,44 @@ coding-ai-agent/
 ├── assets/                    # Application icons and resources
 │   ├── icon.icns             # macOS app icon
 │   ├── icon.ico              # Windows app icon
-│   └── icon.png              # Linux app icon
-├── renderer/                  # React frontend application
-│   ├── src/
-│   │   ├── components/       # React components
-│   │   │   ├── AssistantPane.jsx    # AI chat interface
-│   │   │   ├── EditorPane.jsx       # Code editor with Monaco
-│   │   │   ├── Sidebar.jsx          # File browser and search
-│   │   │   ├── TerminalPane.jsx     # Integrated terminal
-│   │   │   └── ...
-│   │   ├── lib/
-│   │   │   └── api.js        # API client for backend communication
+│   └── icon.png              # App icon (Linux/fallback)
+├── renderer/                  # Frontend React application
+│   ├── public/               # Static assets
+│   └── src/                  # React components and logic
+│       ├── components/       # Reusable UI components
+│       ├── lib/              # Shared utilities and hooks
+│       └── App.jsx           # Main application component
+├── server/                   # Backend services
+│   ├── controllers/          # Request handlers
+│   │   └── scriptsController.js # Script management logic
+│   │
+│   ├── routes/               # API route definitions
+│   │   ├── ai.js            # AI endpoints
+│   │   └── scripts.js       # Script endpoints
+│   │
+│   ├── services/            # Business logic services
+│   │   ├── ai/              # AI-related services
+│   │   │   ├── generationService.js  # AI code generation
+│   │   │   └── responseParser.js     # AI response parsing
+│   │   │
+│   │   └── process/         # Process management
+│   │       └── runManager.js # Script execution and logging
+│   │
+│   ├── utils/               # Shared utilities
+│   │   └── codeUtils.js     # Code processing helpers
+│   │
+│   ├── api.js               # Express server setup
+│   └── storage.js           # File system operations
+├── .gitignore              # Git ignore rules
+├── package.json            # Project configuration
+└── README.md               # This file
 │   │   └── App.jsx           # Main application component
 │   ├── package.json          # Frontend dependencies
 │   └── vite.config.js        # Vite build configuration
-├── server/                    # Express API server
-│   ├── routes/
-│   │   ├── ai.js             # QVAC AI endpoints
-│   │   └── scripts.js        # Script CRUD operations
-│   ├── utils/
-│   │   └── codeUtils.js      # Code processing utilities
+├── scripts/                  # Build and utility scripts
+├── .gitignore               # Git ignore rules
+├── package.json             # Project configuration
+└── README.md                # This file
 │   ├── api.js                # Main server setup with QVAC
 │   └── storage.js            # File system operations
 ├── scripts/                   # Build and utility scripts
