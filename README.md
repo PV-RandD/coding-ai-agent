@@ -199,52 +199,62 @@ coding-ai-agent/
 ├── assets/                    # Application icons and resources
 │   ├── icon.icns             # macOS app icon
 │   ├── icon.ico              # Windows app icon
-│   └── icon.png              # App icon (Linux/fallback)
+│   └── icon.png              # Linux app icon
+│
 ├── renderer/                  # Frontend React application
 │   ├── public/               # Static assets
-│   └── src/                  # React components and logic
-│       ├── components/       # Reusable UI components
-│       ├── lib/              # Shared utilities and hooks
-│       └── App.jsx           # Main application component
-├── server/                   # Backend services
-│   ├── controllers/          # Request handlers
-│   │   └── scriptsController.js # Script management logic
-│   │
-│   ├── routes/               # API route definitions
-│   │   ├── ai.js            # AI endpoints
-│   │   └── scripts.js       # Script endpoints
-│   │
-│   ├── services/            # Business logic services
-│   │   ├── ai/              # AI-related services
-│   │   │   ├── generationService.js  # AI code generation
-│   │   │   └── responseParser.js     # AI response parsing
-│   │   │
-│   │   └── process/         # Process management
-│   │       └── runManager.js # Script execution and logging
-│   │
-│   ├── utils/               # Shared utilities
-│   │   └── codeUtils.js     # Code processing helpers
-│   │
-│   ├── api.js               # Express server setup
-│   └── storage.js           # File system operations
-├── .gitignore              # Git ignore rules
-├── package.json            # Project configuration
-└── README.md               # This file
-│   │   └── App.jsx           # Main application component
+│   ├── src/                  # React components and logic
+│   │   ├── components/       # Reusable UI components
+│   │   │   ├── AskToolbar.jsx       # Natural language prompt interface
+│   │   │   ├── AssistantPane.jsx    # AI chat for code transformation
+│   │   │   ├── EditorPane.jsx       # Monaco-based code editor
+│   │   │   ├── FileBar.jsx          # File navigation bar
+│   │   │   ├── Sidebar.jsx          # Script browser and search
+│   │   │   ├── TerminalPane.jsx     # Integrated terminal
+│   │   │   ├── ToastProvider.jsx    # Toast notification provider
+│   │   │   ├── toastContext.js      # Toast context
+│   │   │   └── useToast.js          # Toast hook
+│   │   ├── lib/              # Shared utilities and hooks
+│   │   │   └── api.js        # API communication layer
+│   │   ├── App.jsx           # Main application component
+│   │   ├── main.jsx          # React app entry point
+│   │   └── index.css         # Global styles
+│   ├── eslint.config.js      # ESLint configuration
 │   ├── package.json          # Frontend dependencies
 │   └── vite.config.js        # Vite build configuration
+│
+├── server/                   # Backend services and API
+│   ├── controllers/          # Request handlers
+│   │   └── scriptsController.js # Script management logic
+│   ├── routes/               # API route definitions
+│   │   ├── ai.js            # AI endpoints for QVAC integration
+│   │   └── scripts.js       # Script CRUD endpoints
+│   ├── services/            # Business logic services
+│   │   ├── ai/              # AI-related services
+│   │   │   └── generationService.js  # AI code generation
+│   │   ├── process/         # Process management
+│   │   │   └── runManager.js # Script execution and logging
+│   │   ├── processes/       # Additional process utilities
+│   │   └── scripts/         # Script-related services
+│   ├── utils/               # Shared utilities
+│   │   └── codeUtils.js     # Code processing helpers
+│   ├── api.js               # Express server setup with QVAC
+│   └── storage.js           # File system operations and indexing
+│
 ├── scripts/                  # Build and utility scripts
-├── .gitignore               # Git ignore rules
-├── package.json             # Project configuration
-└── README.md                # This file
-│   ├── api.js                # Main server setup with QVAC
-│   └── storage.js            # File system operations
-├── scripts/                   # Build and utility scripts
-├── main.js                    # Electron main process
-├── preload.js                # Secure IPC bridge
-├── loading.html              # QVAC initialization screen
-├── package.json              # Main dependencies and scripts
-└── README.md                 # This file
+├── main.js                   # Electron main process
+├── preload.js               # Secure IPC bridge (contextIsolation)
+├── loading.html             # QVAC initialization loading screen
+├── index.html               # Main application HTML
+├── test-api-endpoints.js    # API testing utilities
+├── webpack.main.config.js   # Webpack config for main process
+├── webpack.renderer.config.js # Webpack config for preload script
+├── .gitignore              # Git ignore rules
+├── .npmrc                  # NPM configuration
+├── package.json            # Main dependencies and build scripts
+├── package-lock.json       # Dependency lock file
+├── LICENSE                 # MIT license
+└── README.md               # This documentation
 ```
 
 ### **Key Components**
@@ -377,22 +387,43 @@ Make sure the corresponding runtime is installed and on your `PATH`.
 ---
 
 
-## Scripts
+## 📜 Available Scripts
 
-From `package.json` at the project root:
+### **Main Project Scripts** (`package.json`)
 
-- `npm run dev` — run Vite (renderer) and Electron together
-- `npm run build:ui` — build the React UI only
-- `npm run build` — build UI and package the desktop app
+- `npm run dev` — Start development environment (Vite + Electron with live reload)
+- `npm run dev:renderer` — Start only the React dev server (Vite)
+- `npm run dev:electron` — Start only Electron (waits for renderer)
+- `npm run build:ui` — Build the React UI for production
+- `npm run build:main` — Build main process with webpack (optional)
+- `npm run build:preload` — Build preload script with webpack (optional)
+- `npm run build:webpack` — Build both main and preload with webpack
+- `npm run build` — Build UI and package the desktop app for all platforms
+- `npm run build:deb` — Build only .deb packages for Linux
+- `npm run build:linux` — Build all Linux targets (AppImage + deb)
+- `npm start` — Start the built Electron app
 
-Renderer package (`renderer/package.json`):
+### **Renderer Scripts** (`renderer/package.json`)
 
-- `npm run dev` — Vite dev server
+- `npm run dev` — Vite development server
 - `npm run build` — Vite production build
+- `npm run preview` — Preview production build locally
 
 ---
 
 ## 📦 Deployment & Distribution
+
+### **Webpack Configuration (Optional)**
+
+The project includes optional webpack configurations for advanced bundling:
+
+- **`webpack.main.config.js`** — Main process bundling with externals for native modules
+- **`webpack.renderer.config.js`** — Preload script bundling with externals
+
+These configurations handle:
+- **Externals**: Prevents bundling of native modules (`@tetherto/qvac-sdk`, `bare-runtime-linux-x64`)
+- **TypeScript Support**: Ready for TypeScript migration
+- **Optimized Builds**: Production-ready bundling
 
 ### **Building for Production**
 
@@ -406,6 +437,10 @@ npm run build
 npm run build -- --mac
 npm run build -- --win
 npm run build -- --linux
+
+# Build specific Linux formats
+npm run build:deb      # Debian packages only
+npm run build:linux    # All Linux formats
 ```
 
 ### **Distribution Formats**

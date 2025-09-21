@@ -9,7 +9,12 @@
     "dev:renderer": "cd renderer && npm run dev",
     "dev:electron": "wait-on http://localhost:5173 && electronmon .",
     "build:ui": "cd renderer && npm ci --no-audit --no-fund && npm run build",
-    "build": "npm run build:ui && electron-builder"
+    "build:main": "webpack --config webpack.main.config.js",
+    "build:preload": "webpack --config webpack.renderer.config.js",
+    "build:webpack": "npm run build:main && npm run build:preload",
+    "build": "npm run build:ui && electron-builder",
+    "build:deb": "npm run build:ui && electron-builder --linux deb",
+    "build:linux": "npm run build:ui && electron-builder --linux"
   },
   "keywords": [],
   "author": "",
@@ -20,7 +25,11 @@
     "electron": "^38.0.0",
     "electron-builder": "^26.0.12",
     "electronmon": "^2.0.3",
-    "wait-on": "^8.0.4"
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.6.3",
+    "wait-on": "^8.0.4",
+    "webpack": "^5.95.0",
+    "webpack-cli": "^5.1.4"
   },
   "electronmon": {
     "pattern": [
@@ -46,6 +55,10 @@
     "files": [
       "**/*"
     ],
+    "asarUnpack": [
+      "node_modules/@tetherto/qvac-sdk/**/*",
+      "node_modules/bare-runtime-linux-x64/**/*"
+    ],
     "mac": {
       "target": "dmg",
       "icon": "assets/icon.icns"
@@ -55,8 +68,22 @@
       "icon": "assets/icon.ico"
     },
     "linux": {
-      "target": "AppImage",
-      "icon": "assets/icon.png"
+      "target": [
+        {
+          "target": "deb",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "category": "Development",
+      "maintainer": "LLM Desktop Team",
+      "vendor": "LLM Desktop",
+      "synopsis": "AI-powered desktop application",
+      "description": "A desktop application for AI-powered conversations and document processing"
     }
   }
 }

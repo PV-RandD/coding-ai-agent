@@ -5,6 +5,7 @@ const fs = require("fs");
 const { getStorageDir, loadIndex } = require("./storage");
 const { scriptsRouter } = require("./routes/scripts");
 const { aiRouter } = require("./routes/ai");
+const { loadModel, completion } = require("@tetherto/qvac-sdk");
 
 // Best available model from your collection - Qwen 3 4B Q4
 const DEFAULT_MODEL_URL =
@@ -12,9 +13,6 @@ const DEFAULT_MODEL_URL =
 
 async function initializeQvacClient() {
   try {
-    // Dynamic import of QVAC SDK
-    const { loadModel, completion } = await import("@tetherto/qvac-sdk");
-    
     console.log("Loading QVAC model...");
     const modelId = await loadModel(DEFAULT_MODEL_URL, {
       modelType: "llm",
