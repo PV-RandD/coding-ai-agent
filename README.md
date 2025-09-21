@@ -131,21 +131,6 @@ Artifacts will be generated per platform (e.g., macOS `.dmg`, Windows `nsis`, Li
 3. New scripts and the index will be saved under that folder
 
 The app reads/writes files directly to your chosen directory and maintains a small JSON index for metadata.
-
----
-
-## Running scripts
-
-The app chooses a run command based on file extension:
-
-- `.py` → `python3 file.py`
-- `.sh` → `bash file.sh`
-- `.js` → `node file.js`
-- `.ts` → `npx ts-node --transpile-only file.ts`
-- `.rb`, `.php`, `.go`, `.java`, `.kt`, `.swift`, `.ps1`, `.pl`, `.rs` → appropriate commands
-
-Make sure the corresponding runtime is installed and on your `PATH`.
-
 ---
 
 ### **Building for Production**
@@ -165,14 +150,6 @@ npm run build -- --linux
 npm run build:deb      # Debian packages only
 npm run build:linux    # All Linux formats
 ```
-
-### **Distribution Formats**
-
-- **macOS**: `.dmg` installer with app bundle
-- **Windows**: NSIS installer (`.exe`) with auto-updater support
-- **Linux**: AppImage (portable) and `.deb` packages
-
-model updates handled separately from app updates
 
 ### **Performance Considerations**
 
