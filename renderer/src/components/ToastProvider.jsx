@@ -32,9 +32,14 @@ export default function ToastProvider({ children }) {
               t.type === "error"
                 ? "bg-red-600 text-white"
                 : t.type === "success"
-                ? "bg-green-600 text-white"
+                ? "text-black"
                 : "bg-gray-700 text-white"
             }`}
+            style={
+              t.type === "success"
+                ? { backgroundColor: "#19e3c2" }
+                : {}
+            }
             onClick={() => remove(t.id)}
             role="alert"
           >

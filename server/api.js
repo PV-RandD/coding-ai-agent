@@ -2,23 +2,49 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const fs = require("fs");
-const OpenAI = require("openai");
 const { getStorageDir, loadIndex } = require("./storage");
 const { scriptsRouter } = require("./routes/scripts");
 const { aiRouter } = require("./routes/ai");
+const { loadModel, completion, QWEN3_1_7B_Q4_0 } = require("@tetherto/qvac-sdk");
 
-function createApiServer() {
+// Best available model from your collection - Qwen 3 4B Q4
+const DEFAULT_MODEL_URL =
+  "pear://19ffb75463149955ee24d786dfddd84d41fc872ea813cd4465f5f7299d165adc/model.gguf";
+
+async function initializeQvacClient() {
+  try {
+    console.log("Loading QVAC model...");
+    const modelId = await loadModel(QWEN3_1_7B_Q4_0, { 
+      modelType: "llm",
+      modelConfig: { 
+          ctx_size: 1024,
+          gpu_layers: 0,
+          device: 'cpu'
+      },
+      onProgress: (p) => {
+        console.log(`QVAC Model loading progress: ${p?.percentage ?? 0}%`);
+      },
+    });
+    
+    console.log("QVAC client initialized successfully");
+    return { modelId, completion };
+  } catch (error) {
+    console.error("Failed to initialize QVAC client:", error);
+    return null;
+  }
+}
+
+async function createApiServer() {
   const api = express();
   api.use(cors());
   api.use(bodyParser.json({ limit: "1mb" }));
 
-  const client = process.env.OPENAI_API_KEY
-    ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-    : null;
+  // Initialize QVAC client before mounting routes
+  const qvacClient = await initializeQvacClient();
 
-  // Mount modular routers
-  api.use("/api/scripts", scriptsRouter({ openaiClient: client }));
-  api.use("/api/ai", aiRouter({ openaiClient: client }));
+  // Mount modular routers with initialized client
+  api.use("/api/scripts", scriptsRouter({ qvacClient }));
+  api.use("/api/ai", aiRouter({ qvacClient }));
 
   // Keep search in this file (reads index for previews)
   api.get("/api/search", async (req, res) => {

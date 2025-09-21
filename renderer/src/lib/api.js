@@ -1,15 +1,7 @@
 const BASE_URL = "http://localhost:8787";
 
 function buildHeaders(extra = {}) {
-  const headers = { ...extra };
-  // Inject OpenAI key from localStorage if available so the server can use it
-  try {
-    const k = localStorage.getItem("OPENAI_KEY");
-    if (k && !headers["x-openai-key"]) headers["x-openai-key"] = k;
-  } catch {
-    /* noop */
-  }
-  return headers;
+  return { ...extra };
 }
 
 async function parseJsonOrThrow(res) {

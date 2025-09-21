@@ -19,17 +19,11 @@ export default function AssistantPane({
     setAssistantBusy(true);
     try {
       const prevMessage = aiMessage;
-      const headers = {};
-      try {
-        const k = localStorage.getItem("OPENAI_KEY");
-        if (k) headers["x-openai-key"] = k;
-      } catch {
-        /* no-op */
-      }
-      const data = await aiTransform(
-        { prompt: msg, code: editableCode, name: selected?.name },
-        headers
-      );
+      const data = await aiTransform({
+        prompt: msg,
+        code: editableCode,
+        name: selected?.name,
+      });
       const beforeCode = editableCode;
       const fileId = selected?._id;
       if (data && typeof data.code === "string" && data.code !== beforeCode) {
@@ -39,9 +33,13 @@ export default function AssistantPane({
         if (keep) {
           setEditableCode(data.code);
           try {
-            if (fileId) await saveScript(fileId, data.code);
+            if (fileId) {
+              await saveScript(fileId, data.code);
+              showToast("File saved successfully!", "success", 2000);
+            }
           } catch (e) {
             setAiMessage(String(e));
+            showToast(`Save failed: ${String(e)}`, "error", 4000);
           }
           if (data.explanation) setAiMessage(data.explanation);
         } else {

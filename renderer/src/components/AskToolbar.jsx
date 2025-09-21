@@ -33,17 +33,6 @@ export default function AskToolbar({
           Tip: Select a storage folder to save results.
         </div>
       )}
-      <div className="toolbar-spacer" />
-      <button
-        className="icon-gear"
-        title="Settings"
-        onClick={() => {
-          const ev = new CustomEvent("open-settings");
-          window.dispatchEvent(ev);
-        }}
-      >
-        ⚙️
-      </button>
     </div>
   );
 }

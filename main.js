@@ -25,6 +25,56 @@ function resolveAssetPath(fileName) {
   return null;
 }
 
+const createLoadingWindow = () => {
+  const iconName =
+    process.platform === "darwin"
+      ? "icon.icns"
+      : process.platform === "win32"
+      ? "icon.ico"
+      : "icon.png";
+  const appIconPath = resolveAssetPath(iconName);
+
+  const loadingWin = new BrowserWindow({
+    width: 500,
+    height: 400,
+    frame: false,
+    alwaysOnTop: true,
+    resizable: false,
+    icon: appIconPath || undefined,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  // Handle loading screen path for both development and production
+  let loadingHtml;
+  if (app.isPackaged) {
+    // In packaged app, loading.html should be in the same directory as main.js
+    loadingHtml = path.join(__dirname, "loading.html");
+  } else {
+    // In development, loading.html is in the root directory
+    loadingHtml = path.join(__dirname, "loading.html");
+  }
+  
+  loadingWin.loadFile(loadingHtml).catch((e) => {
+    console.error("Failed to load loading screen:", e);
+    // Fallback: create a simple loading window with basic HTML
+    loadingWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
+      <!DOCTYPE html>
+      <html>
+      <head><title>Loading...</title></head>
+      <body style="margin:0;padding:40px;background:#667eea;color:white;font-family:Arial;text-align:center;">
+        <h1>🤖 Initializing QVAC...</h1>
+        <p>Please wait while the AI engine loads...</p>
+      </body>
+      </html>
+    `)}`);
+  });
+  
+  return loadingWin;
+};
+
 const createWindow = () => {
   const iconName =
     process.platform === "darwin"
@@ -40,6 +90,7 @@ const createWindow = () => {
     width: 800,
     height: 600,
     icon: appIconPath || undefined,
+    show: false, // Don't show immediately
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,
@@ -53,11 +104,24 @@ const createWindow = () => {
       console.error("Failed to load packaged UI:", e);
     });
   } else {
-  win.loadURL("http://localhost:5173");
+    win.loadURL("http://localhost:5173");
   }
+  
+  // Show window when ready
+  win.once('ready-to-show', () => {
+    win.show();
+  });
+  
+  return win;
 };
 
-app.whenReady().then(() => {
+// Global variable to track QVAC initialization status
+let qvacInitialized = false;
+let qvacInitPromise = null;
+
+app.whenReady().then(async () => {
+  console.log(`[STARTUP] App ready. Packaged: ${app.isPackaged}`);
+  
   // Set macOS dock icon if available
   try {
     if (process.platform === "darwin") {
@@ -68,7 +132,38 @@ app.whenReady().then(() => {
       }
     }
   } catch {}
-  createWindow();
+  
+  // Show loading screen first
+  console.log("[STARTUP] Showing loading screen...");
+  const loadingWindow = createLoadingWindow();
+  
+  try {
+    // Wait for QVAC initialization before creating the main window
+    console.log("[STARTUP] Waiting for QVAC initialization to complete...");
+    await waitForQvacInitialization();
+    console.log("[STARTUP] QVAC initialization complete. Creating main window...");
+    
+    // Create main window
+    const mainWindow = createWindow();
+    
+    // Close loading window after main window is ready
+    mainWindow.once('ready-to-show', () => {
+      console.log("[STARTUP] Main window ready, closing loading screen");
+      loadingWindow.close();
+    });
+    
+  } catch (error) {
+    console.error("[STARTUP] Failed to initialize QVAC:", error);
+    // Show error and close loading window
+    loadingWindow.close();
+    
+    // Create main window anyway but show error
+    const mainWindow = createWindow();
+    mainWindow.once('ready-to-show', () => {
+      // You could show an error dialog here if needed
+      console.error("[STARTUP] App started without QVAC initialization");
+    });
+  }
 });
 
 // IPC: run shell command (optionally in a provided cwd)
@@ -79,7 +174,7 @@ ipcMain.handle("run-command", async (_event, payload) => {
   return new Promise((resolve) => {
     exec(
       actualCmd,
-      { shell: "/bin/zsh", cwd: cwd && typeof cwd === "string" ? cwd : undefined },
+      { shell: "/bin/bash", cwd: cwd && typeof cwd === "string" ? cwd : undefined },
       (error, stdout, stderr) => {
         resolve({
           ok: !error,
@@ -107,6 +202,12 @@ ipcMain.handle("select-storage-dir", async () => {
 ipcMain.handle("get-storage-dir", async () => ({
   ok: !!getStorageDir(),
   storageDir: getStorageDir(),
+}));
+
+// IPC: get QVAC initialization status
+ipcMain.handle("get-qvac-status", async () => ({
+  initialized: qvacInitialized,
+  initializing: qvacInitPromise !== null && !qvacInitialized,
 }));
 
 // IPC: list directory contents (non-recursive)
@@ -199,14 +300,87 @@ ipcMain.handle("search-index", async (_event, query) => {
   }
 });
 
-// Start Express API server inside Electron main
-async function startApiServer() {
-  const { createApiServer } = require("./server/api");
-  const api = createApiServer();
-  const port = process.env.PORT || 8787;
-  api.listen(port, () => {
-    console.log(`[API] Listening on http://localhost:${port}`);
-  });
+// Function to wait for QVAC initialization
+async function waitForQvacInitialization() {
+  console.log(`[QVAC] Wait called. Initialized: ${qvacInitialized}, Promise exists: ${!!qvacInitPromise}`);
+  
+  if (qvacInitialized) {
+    console.log("[QVAC] Already initialized, returning immediately");
+    return Promise.resolve();
+  }
+  
+  if (qvacInitPromise) {
+    console.log("[QVAC] Waiting for existing initialization promise");
+    return qvacInitPromise;
+  }
+  
+  // If not already started, start the API server initialization
+  console.log("[QVAC] Starting new initialization");
+  qvacInitPromise = startApiServer();
+  return qvacInitPromise;
 }
 
-startApiServer().catch((e) => console.error("API failed to start", e));
+// Start Express API server inside Electron main
+async function startApiServer() {
+  try {
+    const { createApiServer } = require("./server/api");
+    console.log("Initializing API server with QVAC client...");
+    
+    // Broadcast status change: initializing
+    BrowserWindow.getAllWindows().forEach(win => {
+      win.webContents.send("qvac-status-changed", { 
+        initialized: false, 
+        initializing: true 
+      });
+    });
+    
+    const api = await createApiServer();
+    const port = process.env.PORT || 8787;
+    
+    return new Promise((resolve, reject) => {
+      api.listen(port, (err) => {
+        if (err) {
+          console.error("API failed to start", err);
+          // Broadcast status change: failed
+          BrowserWindow.getAllWindows().forEach(win => {
+            win.webContents.send("qvac-status-changed", { 
+              initialized: false, 
+              initializing: false,
+              error: err.message 
+            });
+          });
+          reject(err);
+        } else {
+          console.log(`[API] Listening on http://localhost:${port}`);
+          qvacInitialized = true;
+          
+          // Broadcast status change: initialized
+          BrowserWindow.getAllWindows().forEach(win => {
+            win.webContents.send("qvac-status-changed", { 
+              initialized: true, 
+              initializing: false 
+            });
+          });
+          
+          resolve();
+        }
+      });
+    });
+  } catch (error) {
+    console.error("API failed to start", error);
+    
+    // Broadcast status change: failed
+    BrowserWindow.getAllWindows().forEach(win => {
+      win.webContents.send("qvac-status-changed", { 
+        initialized: false, 
+        initializing: false,
+        error: error.message 
+      });
+    });
+    
+    throw error;
+  }
+}
+
+// Initialize the API server promise but don't start it immediately
+// It will be started when waitForQvacInitialization() is called
