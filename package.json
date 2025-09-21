@@ -45,10 +45,12 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
-    "mongoose": "^8.18.1"
+    "mongoose": "^8.18.1",
+    "bare-runtime": "^1.22.1-0"
   },
   "optionalDependencies": {
-    "bare-runtime-linux-x64": "^1.22.0"
+    "bare-runtime-linux-x64": "^1.22.0",
+    "bare-runtime-darwin-arm64": "^1.22.0"
   },
   "build": {
     "appId": "com.llm-desktop.app",
@@ -65,7 +67,10 @@
     ],
     "mac": {
       "target": "dmg",
-      "icon": "assets/icon.icns"
+      "icon": "assets/icon.icns",
+      "asarUnpack": [
+        "node_modules/bare-runtime-darwin-arm64/**/*"
+      ]
     },
     "win": {
       "target": "nsis",
@@ -75,11 +80,16 @@
       "target": [
         {
           "target": "deb",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icon.png",
