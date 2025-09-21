@@ -41,12 +41,14 @@
   },
   "dependencies": {
     "@tetherto/qvac-sdk": "^0.1.0",
-    "bare-runtime-linux-x64": "^1.22.0",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "mongoose": "^8.18.1"
+  },
+  "optionalDependencies": {
+    "bare-runtime-linux-x64": "^1.22.0"
   },
   "build": {
     "appId": "com.llm-desktop.app",
@@ -59,8 +61,7 @@
     ],
     "asarUnpack": [
       "node_modules/@tetherto/qvac-sdk/dist/server/worker.js",
-      "node_modules/@tetherto/qvac-sdk/**/*",
-      "node_modules/bare-runtime-linux-x64/**/*"
+      "node_modules/@tetherto/qvac-sdk/**/*"
     ],
     "mac": {
       "target": "dmg",
@@ -86,7 +87,12 @@
       "maintainer": "LLM Desktop Team",
       "vendor": "LLM Desktop",
       "synopsis": "AI-powered desktop application",
-      "description": "A desktop application for AI-powered conversations and document processing"
+      "description": "A desktop application for AI-powered conversations and document processing",
+      "asarUnpack": [
+        "node_modules/@tetherto/qvac-sdk/dist/server/worker.js",
+        "node_modules/@tetherto/qvac-sdk/**/*",
+        "node_modules/bare-runtime-linux-x64/**/*"
+      ]
     }
   }
 }
