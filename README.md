@@ -68,7 +68,7 @@ A powerful cross-platform Electron desktop application that combines local AI in
 
 ### Prerequisites
 
-- **Node.js 18+** and npm
+- **Node.js 20+** and npm
 - **Optional Runtimes**: Install languages you plan to use:
   - Python 3.8+ for `.py` scripts
   - Node.js for `.js`/`.ts` scripts  
@@ -89,7 +89,14 @@ npm install
 cd renderer && npm install
 ```
 
+
 ### Development
+
+Go back to the parent forlder:
+
+```bash
+cd ..
+```
 
 Start the React dev server and Electron together:
 
