@@ -92,7 +92,7 @@ class ScriptsController {
       idx.scripts.push({ id, name, filePath, explanation, tags: [], createdAt });
       saveIndex(idx);
 
-      return res.json({ _id: id, name, explanation, tags: [], createdAt });
+      return res.json({ _id: id, name, code, explanation, tags: [], createdAt });
     } catch (e) {
       console.error(e);
       return res.status(500).json({ error: String(e) });

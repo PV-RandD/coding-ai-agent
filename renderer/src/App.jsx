@@ -5,6 +5,8 @@ import AskToolbar from "./components/AskToolbar";
 import FileBar from "./components/FileBar";
 import EditorPane from "./components/EditorPane";
 import TerminalPane from "./components/TerminalPane";
+import CodeActionPopup from "./components/CodeActionPopup";
+import FolderSelectionPopup from "./components/FolderSelectionPopup";
 import {
   listScripts,
   getScript,
@@ -33,6 +35,13 @@ function App() {
   const [askText, setAskText] = useState("");
   const [aiMessage, setAiMessage] = useState("");
   const [isRunning, setIsRunning] = useState(false);
+  
+  // Popup state for Ask AI
+  const [showAskPopup, setShowAskPopup] = useState(false);
+  const [pendingAskData, setPendingAskData] = useState(null);
+  
+  // Popup state for Folder Selection
+  const [showFolderPopup, setShowFolderPopup] = useState(false);
 
   // Terminal state
   const [terminalVisible, setTerminalVisible] = useState(true);
@@ -238,7 +247,13 @@ function App() {
   useEffect(() => {
     (async () => {
       const res = await window.api.getStorageDir();
-      if (res.ok) setStorageDir(res.storageDir);
+      if (res.ok && res.storageDir) {
+        setStorageDir(res.storageDir);
+        setShowFolderPopup(false);
+      } else {
+        // No storage directory selected, show popup
+        setShowFolderPopup(true);
+      }
     })();
   }, []);
 
@@ -256,13 +271,20 @@ function App() {
     setError("");
     try {
       const saved = await createScript(q);
-      // Load response into editor and assistant panel
-      if (typeof saved.code === "string") setEditableCode(saved.code);
-      setAiMessage(saved.explanation || "");
-      // Save to list and select new script
-      await fetchList();
-      if (saved._id) setSelectedId(saved._id);
-      setAskText("");
+      
+      // Store the data and show popup for new scripts
+      if (saved && typeof saved.code === "string" && saved.code.trim()) {
+        setPendingAskData(saved);
+        setShowAskPopup(true);
+        setAskText("");
+      } else {
+        // Fallback for scripts without code
+        setEditableCode(saved.code || "");
+        setAiMessage(saved.explanation || "");
+        await fetchList();
+        if (saved._id) setSelectedId(saved._id);
+        setAskText("");
+      }
     } catch (e) {
       setError(String(e));
       showToast(`Ask failed: ${String(e)}`, "error", 4000);
@@ -270,6 +292,132 @@ function App() {
       setIsGenerating(false);
     }
   }
+
+  // Handle Ask AI popup actions
+  const handleAskRunCode = async () => {
+    if (!pendingAskData) return;
+    
+    try {
+      // Load response into editor and assistant panel
+      setEditableCode(pendingAskData.code);
+      setAiMessage(pendingAskData.explanation || "");
+      
+      // Save to list and select new script
+      await fetchList();
+      if (pendingAskData._id) {
+        setSelectedId(pendingAskData._id);
+        
+        // Run the script immediately
+        setRunOutput("");
+        setTerminalVisible(true);
+        setActiveTermTab("output");
+        setIsRunning(true);
+        
+        const data = await runScript(pendingAskData._id);
+        const out = `${data.stdout || ""}${data.stderr ? "\n---\n" + data.stderr : ""}`;
+        const help =
+          Array.isArray(data.suggestions) && data.suggestions.length
+            ? "\n\nSuggestions:\n- " + data.suggestions.join("\n- ")
+            : "";
+        setRunOutput(out + help);
+        
+        // Auto-fix common dependency errors in terminal and re-run
+        if (data.stderr) {
+          await tryAutoFixAndRerun(data.stderr);
+        }
+      }
+    } catch (e) {
+      setError(String(e));
+      showToast(`Error: ${String(e)}`, "error", 4000);
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  const handleAskEditCode = async () => {
+    if (!pendingAskData) return;
+    
+    try {
+      // Load response into editor and assistant panel
+      setEditableCode(pendingAskData.code);
+      setAiMessage(pendingAskData.explanation || "");
+      
+      // Save to list and select new script
+      await fetchList();
+      if (pendingAskData._id) {
+        setSelectedId(pendingAskData._id);
+      }
+    } catch (e) {
+      setError(String(e));
+      showToast(`Error: ${String(e)}`, "error", 4000);
+    }
+  };
+
+  const handleAskKeepChanges = async () => {
+    if (!pendingAskData) return;
+    
+    try {
+      // Load response into editor and assistant panel
+      setEditableCode(pendingAskData.code);
+      setAiMessage(pendingAskData.explanation || "");
+      
+      // Save to list and select new script
+      await fetchList();
+      if (pendingAskData._id) {
+        setSelectedId(pendingAskData._id);
+      }
+    } catch (e) {
+      setError(String(e));
+      showToast(`Error: ${String(e)}`, "error", 4000);
+    }
+  };
+
+  const handleCloseAskPopup = () => {
+    setShowAskPopup(false);
+    setPendingAskData(null);
+  };
+
+  // Handle folder selection from popup
+  const handleSelectFolderFromPopup = async () => {
+    const r = await window.api.selectStorageDir();
+    if (r.ok && r.storageDir) {
+      setStorageDir(r.storageDir);
+      setShowFolderPopup(false);
+      
+      // Show terminal and indicate cwd
+      setTerminalVisible(true);
+      setActiveTermTab("terminal");
+      setTermLines((prev) => [
+        ...prev,
+        `# Loaded folder: ${r.storageDir}`,
+      ]);
+      
+      // Run a simple command to reflect current directory
+      try {
+        const resp = await window.api.runCommand({
+          command: "pwd",
+          cwd: r.storageDir,
+        });
+        const out = (resp.stdout || resp.stderr || resp.error || "").trim();
+        if (out) {
+          setTermLines((prev) => [...prev, out]);
+        }
+      } catch (e) {
+        console.error("Failed to run pwd:", e);
+      }
+      
+      // Fetch scripts after folder selection
+      await fetchList();
+      showToast("Storage folder selected successfully!", "success", 3000);
+    }
+  };
+
+  const handleCloseFolderPopup = () => {
+    // Only allow closing if there's already a storage directory
+    if (storageDir) {
+      setShowFolderPopup(false);
+    }
+  };
 
   return (
     <div className="h-screen w-[100vw] text-white bg-gray-900 flex flex-col">
@@ -296,6 +444,7 @@ function App() {
             const r = await window.api.selectStorageDir();
             if (r.ok) {
               setStorageDir(r.storageDir);
+              setShowFolderPopup(false); // Hide popup when folder is selected
               // Show terminal and indicate cwd
               setTerminalVisible(true);
               setActiveTermTab("terminal");
@@ -312,8 +461,11 @@ function App() {
                 const out = (resp.stdout || resp.stderr || resp.error || "").trim();
                 if (out)
                   setTermLines((prev) => [...prev, out]);
-              } catch { }
+              } catch (e) {
+                console.error("Failed to run pwd:", e);
+              }
               await fetchList();
+              showToast("Storage folder selected successfully!", "success", 3000);
             }
           }}
         />
@@ -398,6 +550,35 @@ function App() {
                 setEditableCode={setEditableCode}
                 aiMessage={aiMessage}
                 setAiMessage={setAiMessage}
+                onRunCode={async (fileId) => {
+                  if (!fileId) return;
+                  setRunOutput("");
+                  setTerminalVisible(true);
+                  setActiveTermTab("output");
+                  setIsRunning(true);
+                  try {
+                    const data = await runScript(fileId);
+                    const out = `${data.stdout || ""}${data.stderr ? "\n---\n" + data.stderr : ""}`;
+                    const help =
+                      Array.isArray(data.suggestions) && data.suggestions.length
+                        ? "\n\nSuggestions:\n- " + data.suggestions.join("\n- ")
+                        : "";
+                    setRunOutput(out + help);
+                    // Auto-fix common dependency errors in terminal and re-run
+                    if (data.stderr) {
+                      await tryAutoFixAndRerun(data.stderr);
+                    }
+                  } catch (e) {
+                    setRunOutput(String(e));
+                    showToast(`Run error: ${String(e)}`, "error", 4000);
+                  } finally {
+                    setIsRunning(false);
+                  }
+                }}
+                onShowOutput={() => {
+                  setTerminalVisible(true);
+                  setActiveTermTab("output");
+                }}
               />
             </div>
           </div>
@@ -429,6 +610,25 @@ function App() {
             setIsRunning(false);
           }
         }}
+      />
+
+      {/* Ask AI Popup */}
+      <CodeActionPopup
+        isVisible={showAskPopup}
+        onClose={handleCloseAskPopup}
+        onRun={handleAskRunCode}
+        onEdit={handleAskEditCode}
+        onKeep={handleAskKeepChanges}
+        title="New Script Generated"
+        message="AI has created a new script for you. What would you like to do?"
+      />
+
+      {/* Folder Selection Popup */}
+      <FolderSelectionPopup
+        isVisible={showFolderPopup}
+        onClose={handleCloseFolderPopup}
+        onSelectFolder={handleSelectFolderFromPopup}
+        showCloseButton={!!storageDir}
       />
     </div>
   );

@@ -15,7 +15,7 @@ export default function Sidebar({
           className="btn btn-secondary px-2 py-1 text-xs"
           onClick={onSelectFolder}
         >
-          Folder
+          Add Folder
         </button>
       </div>
       <input
