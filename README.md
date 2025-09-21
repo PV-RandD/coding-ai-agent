@@ -26,7 +26,6 @@ A powerful cross-platform Electron desktop application that combines local AI in
 - **Semantic search** across code, comments, and explanations
 - **Tag-based organization** with auto-tagging
 - **File system integration** with your chosen storage directory
-- **Quick preview** of code snippets and explanations
 
 ## 🎯 QVAC Advantages
 
@@ -275,23 +274,6 @@ coding-ai-agent/
 
 ## 🔧 How It Works
 
-### **QVAC Initialization Flow**
-
-The application implements a sophisticated startup sequence to ensure the AI model is ready before user interaction:
-
-```mermaid
-graph TD
-    A[App Start] --> B[Show Loading Screen]
-    B --> C[Initialize QVAC SDK]
-    C --> D[Load Qwen 3 4B Model]
-    D --> E[Model Ready?]
-    E -->|Yes| F[Create Main Window]
-    E -->|No| G[Show Error & Fallback]
-    F --> H[Close Loading Screen]
-    G --> H
-    H --> I[App Ready]
-```
-
 ### **Electron Main Process (`main.js`)**
 
 - **Window Management**: Creates loading screen first, then main window after QVAC initialization
@@ -473,13 +455,6 @@ The app is configured for automatic updates using electron-updater:
 
 ---
 
-
-## 📄 License
-
-MIT License - See [LICENSE](LICENSE) file for details.
-
----
-
 ## 🙏 Acknowledgments
 
 - **QVAC SDK** - For providing excellent local AI inference capabilities
@@ -487,6 +462,9 @@ MIT License - See [LICENSE](LICENSE) file for details.
 - **React & Vite** - For the modern, fast frontend development experience
 - **Monaco Editor** - For the powerful code editing experience
 
----
 
-*Built with ❤️ for developers who value privacy, performance, and local AI capabilities.*
+
+## 📄 License
+
+MIT License - See [LICENSE](LICENSE) file for details.
+---
