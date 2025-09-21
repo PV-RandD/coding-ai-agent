@@ -41,20 +41,6 @@ This runs:
 - `renderer`: Vite dev server at `http://localhost:5173`
 - `electron`: Electron with live reload, waiting for the renderer
 
-### Build a production app
-
-```bash
-npm run build
-```
-
-This will:
-
-- Build the renderer UI
-- Package the Electron app with electron‑builder into `dist/`
-
-Artifacts will be generated per platform (e.g., macOS `.dmg`, Windows `nsis`, Linux `AppImage`). App icons are in `assets/`.
-
----
 
 
 ## 🔧 Troubleshooting
