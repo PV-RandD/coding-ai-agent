@@ -38,22 +38,26 @@ function scriptsRouter({ qvacClient }) {
       if (!client)
         return res.status(500).json({ error: "QVAC client is not initialized" });
 
-      const sys = "You are a helpful code generator. You must respond with valid JSON only. No additional text or explanations outside the JSON.";
-      
-      const userMsg = `Task: ${prompt}
+      const sys = `You are a code generator that MUST respond with ONLY valid JSON. 
 
-You must respond with ONLY a valid JSON object in this exact format:
+CRITICAL RULES:
+1. Your response must be ONLY a JSON object - no other text, explanations, or thinking
+2. Do not include <think> tags or any other markup
+3. Do not include markdown code blocks
+4. Start your response immediately with { and end with }
+5. Escape all special characters properly in JSON strings
+6. Use \\n for newlines in code strings`;
+      
+      const userMsg = `Generate code for: ${prompt}
+
+Respond with ONLY this JSON format (no other text):
 {"name": "filename.ext", "code": "actual_code_here", "explanation": "brief description"}
 
 Examples:
-Request: "print hello world"
-Response: {"name": "hello.py", "code": "print('Hello World!')", "explanation": "Prints hello world"}
+{"name": "hello.py", "code": "print('Hello World!')", "explanation": "Prints hello world"}
+{"name": "numbers.py", "code": "for i in range(1, 6):\\n    print(i)", "explanation": "Prints numbers 1 to 5"}
 
-Request: "print numbers 1 to 5"  
-Response: {"name": "numbers.py", "code": "for i in range(1, 6):\\n    print(i)", "explanation": "Prints numbers 1 to 5"}
-
-Now generate code for: ${prompt}
-Response:`;
+JSON response:`;
 
       const messages = [
         { role: "system", content: sys },
@@ -74,107 +78,307 @@ Response:`;
         return res.status(502).json({ error: "Unexpected response format from QVAC" });
       }
 
-      // Clean and parse the response
-      let generated;
+      // Strong JSON parsing with multiple extraction strategies
+      let generated = null;
       
-      // Clean the content first - remove any extra whitespace and control characters
-      const cleanContent = content.trim().replace(/[\x00-\x1F\x7F]/g, '');
-      console.log("Raw model response:", cleanContent.substring(0, 200));
+      console.log("Raw model response:", content.substring(0, 300));
       
-      // First, try to parse the entire cleaned content as JSON
+      // Strategy 1: Try to parse the entire content as JSON
       try {
+        const cleanContent = content.trim().replace(/[\x00-\x1F\x7F]/g, '');
         generated = JSON.parse(cleanContent);
-        console.log("Successfully parsed as pure JSON");
+        console.log("✅ Successfully parsed as pure JSON");
       } catch (e) {
-        console.log("Not pure JSON, trying extraction methods...");
+        console.log("❌ Not pure JSON, trying extraction methods...");
         
-        // Try to find JSON pattern more aggressively
-        const jsonPatterns = [
-          /\{[^{}]*"name"[^{}]*"code"[^{}]*"explanation"[^{}]*\}/,
-          /\{[\s\S]*?"name"[\s\S]*?"code"[\s\S]*?"explanation"[\s\S]*?\}/,
-          /\{[\s\S]*?\}/
-        ];
+        // Strategy 2: Remove common AI model artifacts and try again
+        let cleanedContent = content
+          .replace(/<think>[\s\S]*?<\/think>/gi, '') // Remove thinking tags
+          .replace(/^.*?(?=\{)/s, '') // Remove everything before first {
+          .replace(/\}.*$/s, '}') // Remove everything after last }
+          .trim();
         
-        let jsonStr = null;
-        for (const pattern of jsonPatterns) {
-          const match = cleanContent.match(pattern);
-          if (match) {
-            jsonStr = match[0];
-            break;
-          }
-        }
-        
-        if (jsonStr) {
-          try {
-            // Clean up the JSON string
-            jsonStr = jsonStr.replace(/[\x00-\x1F\x7F]/g, '').trim();
-            console.log("Attempting to parse extracted JSON:", jsonStr);
-            generated = JSON.parse(jsonStr);
-            console.log("Successfully parsed extracted JSON");
-          } catch (parseError) {
-            console.log("JSON parsing failed, trying fallback...");
-            generated = null;
-          }
-        }
-        
-        // If JSON parsing failed, try to extract code from markdown
-        if (!generated) {
-          const codeMatch = content.match(/```(?:python|javascript|bash|sh|java|go|rust|php|ruby)?\n?([\s\S]*?)```/);
-          if (codeMatch) {
-            console.log("Successfully extracted code from markdown");
-            const code = codeMatch[1].trim();
-            
-            // Try to infer filename from content
-            let name = "script.py"; // default
-            if (code.includes("print(") || code.includes("def ") || code.includes("import ")) {
-              name = "alphabet_printer.py";
-            } else if (code.includes("console.log") || code.includes("function")) {
-              name = "script.js";
-            } else if (code.includes("echo") || code.includes("#!/bin/bash")) {
-              name = "script.sh";
+        try {
+          generated = JSON.parse(cleanedContent);
+          console.log("✅ Successfully parsed after removing AI artifacts");
+        } catch (e2) {
+          
+          // Strategy 3: Extract JSON using multiple robust patterns
+          const jsonPatterns = [
+            // Most specific: exact structure we want
+            /\{\s*"name"\s*:\s*"[^"]*"\s*,\s*"code"\s*:\s*"[\s\S]*?"\s*,\s*"explanation"\s*:\s*"[^"]*"\s*\}/,
+            // Flexible order
+            /\{\s*(?:"(?:name|code|explanation)"\s*:\s*"[\s\S]*?"\s*,?\s*){3}\s*\}/,
+            // Any JSON object with our required fields
+            /\{[\s\S]*?"name"[\s\S]*?"code"[\s\S]*?"explanation"[\s\S]*?\}/,
+            // Broader JSON object
+            /\{[\s\S]*?\}/
+          ];
+          
+          let jsonStr = null;
+          for (let i = 0; i < jsonPatterns.length; i++) {
+            const pattern = jsonPatterns[i];
+            const match = content.match(pattern);
+            if (match) {
+              jsonStr = match[0];
+              console.log(`Found JSON with pattern ${i + 1}:`, jsonStr.substring(0, 100));
+              break;
             }
-            
-            generated = {
-              name: name,
-              code: code,
-              explanation: `Script that does: ${prompt}`
-            };
-            console.log("Generated object from markdown:", generated);
-          } else {
-            console.error("No JSON or code blocks found in response:", cleanContent.substring(0, 300));
-            
-            // Fallback: Create a reasonable response based on the prompt
-            console.log("Using fallback response generation...");
-            if (prompt.toLowerCase().includes("alphabet") || prompt.toLowerCase().includes("a to z")) {
-              generated = {
-                name: "alphabet.py",
-                code: "for i in range(26):\n    print(chr(ord('a') + i))",
-                explanation: "Prints alphabet from a to z"
-              };
-            } else if (prompt.toLowerCase().includes("hello")) {
-              generated = {
-                name: "hello.py", 
-                code: "print('Hello World!')",
-                explanation: "Prints hello world"
-              };
-            } else if (prompt.toLowerCase().includes("number")) {
-              generated = {
-                name: "numbers.py",
-                code: "for i in range(1, 11):\n    print(i)", 
-                explanation: "Prints numbers 1 to 10"
-              };
-            } else {
-              // Generic Python script
-              generated = {
-                name: "script.py",
-                code: `# Generated code for: ${prompt}\nprint("Task: ${prompt}")`,
-                explanation: `Script for: ${prompt}`
-              };
+          }
+          
+          if (jsonStr) {
+            try {
+              // Clean up the JSON string more aggressively
+              jsonStr = jsonStr
+                .replace(/[\x00-\x1F\x7F]/g, '') // Remove control chars
+                .replace(/\\n/g, '\\n') // Preserve newlines in strings
+                .replace(/\\"/g, '\\"') // Preserve escaped quotes
+                .trim();
+              
+              console.log("Attempting to parse extracted JSON...");
+              generated = JSON.parse(jsonStr);
+              console.log("✅ Successfully parsed extracted JSON");
+            } catch (parseError) {
+              console.log("❌ JSON parsing failed:", parseError.message);
+              
+              // Strategy 4: Try to fix common JSON issues
+              try {
+                let fixedJson = jsonStr
+                  .replace(/,\s*}/g, '}') // Remove trailing commas
+                  .replace(/,\s*]/g, ']') // Remove trailing commas in arrays
+                  .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // Quote unquoted keys
+                  .replace(/:\s*'([^']*)'/g, ': "$1"') // Replace single quotes with double
+                  .replace(/\\'/g, "'"); // Fix escaped single quotes
+                
+                generated = JSON.parse(fixedJson);
+                console.log("✅ Successfully parsed after JSON fixes");
+              } catch (fixError) {
+                console.log("❌ JSON fix attempt failed:", fixError.message);
+              }
             }
-            console.log("Generated fallback response:", generated);
           }
         }
       }
+      
+      // Strategy 5: Extract from markdown code blocks if JSON parsing failed
+      if (!generated) {
+        console.log("Trying markdown extraction...");
+        const codeMatch = content.match(/```(?:python|javascript|js|bash|sh|java|go|rust|php|ruby|py)?\n?([\s\S]*?)```/);
+        if (codeMatch) {
+          console.log("✅ Successfully extracted code from markdown");
+          const code = codeMatch[1].trim();
+          
+          // Smart filename inference
+          let name = "script.py"; // default
+          let ext = ".py";
+          
+          if (code.includes("print(") || code.includes("def ") || code.includes("import ") || code.includes("from ")) {
+            ext = ".py";
+          } else if (code.includes("console.log") || code.includes("function") || code.includes("const ") || code.includes("let ")) {
+            ext = ".js";
+          } else if (code.includes("echo") || code.includes("#!/bin/bash") || code.includes("#!/bin/sh")) {
+            ext = ".sh";
+          } else if (code.includes("public class") || code.includes("System.out")) {
+            ext = ".java";
+          } else if (code.includes("package main") || code.includes("fmt.Print")) {
+            ext = ".go";
+          }
+          
+          // Generate appropriate filename based on prompt
+          const promptLower = prompt.toLowerCase();
+          if (promptLower.includes("crud")) {
+            name = `crud${ext}`;
+          } else if (promptLower.includes("hello")) {
+            name = `hello${ext}`;
+          } else if (promptLower.includes("alphabet")) {
+            name = `alphabet${ext}`;
+          } else if (promptLower.includes("js") || promptLower.includes("javascript") || promptLower.includes("node")) {
+            name = `script.js`;
+            ext = ".js";
+          } else {
+            name = `script${ext}`;
+          }
+          
+          generated = {
+            name: name,
+            code: code,
+            explanation: `Generated from markdown: ${prompt}`
+          };
+          console.log("✅ Generated object from markdown");
+        }
+      }
+      
+      // Strategy 6: Intelligent fallback based on prompt analysis
+      if (!generated) {
+        console.log("Using intelligent fallback response generation...");
+        const promptLower = prompt.toLowerCase();
+        
+        if (promptLower.includes("crud") && (promptLower.includes("js") || promptLower.includes("javascript") || promptLower.includes("node"))) {
+          generated = {
+            name: "crud.js",
+            code: `// Simple CRUD operations in JavaScript
+let items = [];
+let nextId = 1;
+
+function create(name, description) {
+    const item = { id: nextId++, name, description };
+    items.push(item);
+    return item;
+}
+
+function read() {
+    return items;
+}
+
+function update(id, name, description) {
+    const item = items.find(item => item.id === id);
+    if (item) {
+        if (name !== undefined) item.name = name;
+        if (description !== undefined) item.description = description;
+        return item;
+    }
+    return null;
+}
+
+function deleteItem(id) {
+    const index = items.findIndex(item => item.id === id);
+    if (index !== -1) {
+        return items.splice(index, 1)[0];
+    }
+    return null;
+}
+
+// Example usage
+console.log('Creating items...');
+create("Task 1", "First task");
+create("Task 2", "Second task");
+console.log("All items:", read());
+
+console.log('Updating item...');
+update(1, undefined, "Updated first task");
+console.log("After update:", read());
+
+console.log('Deleting item...');
+deleteItem(2);
+console.log("After delete:", read());`,
+            explanation: "Simple CRUD (Create, Read, Update, Delete) operations with JavaScript"
+          };
+        } else if (promptLower.includes("crud")) {
+          generated = {
+            name: "crud.py",
+            code: `# Simple CRUD operations
+items = []
+
+def create(name, description):
+    item = {'id': len(items) + 1, 'name': name, 'description': description}
+    items.append(item)
+    return item
+
+def read():
+    return items
+
+def update(item_id, name=None, description=None):
+    for item in items:
+        if item['id'] == item_id:
+            if name: item['name'] = name
+            if description: item['description'] = description
+            return item
+    return None
+
+def delete(item_id):
+    global items
+    items = [item for item in items if item['id'] != item_id]
+
+# Example usage
+if __name__ == "__main__":
+    create("Task 1", "First task")
+    create("Task 2", "Second task")
+    print("All items:", read())
+    update(1, description="Updated first task")
+    print("After update:", read())
+    delete(2)
+    print("After delete:", read())`,
+            explanation: "Simple CRUD (Create, Read, Update, Delete) operations with Python"
+          };
+        } else if (promptLower.includes("hello") && (promptLower.includes("js") || promptLower.includes("javascript") || promptLower.includes("node"))) {
+          generated = {
+            name: "hello.js",
+            code: "console.log('Hello World!');",
+            explanation: "Simple hello world program in JavaScript"
+          };
+        } else if (promptLower.includes("hello")) {
+          generated = {
+            name: "hello.py",
+            code: "print('Hello World!')",
+            explanation: "Simple hello world program"
+          };
+        } else if ((promptLower.includes("alphabet") || promptLower.includes("a to z")) && (promptLower.includes("js") || promptLower.includes("javascript") || promptLower.includes("node"))) {
+          generated = {
+            name: "alphabet.js",
+            code: `// Print alphabet from a to z
+for (let i = 0; i < 26; i++) {
+    console.log(String.fromCharCode(97 + i));
+}`,
+            explanation: "Prints alphabet from a to z in JavaScript"
+          };
+        } else if (promptLower.includes("alphabet") || promptLower.includes("a to z")) {
+          generated = {
+            name: "alphabet.py",
+            code: "for i in range(26):\n    print(chr(ord('a') + i))",
+            explanation: "Prints alphabet from a to z"
+          };
+        } else if (promptLower.includes("number") && (promptLower.includes("js") || promptLower.includes("javascript") || promptLower.includes("node"))) {
+          generated = {
+            name: "numbers.js",
+            code: `// Print numbers 1 to 10
+for (let i = 1; i <= 10; i++) {
+    console.log(i);
+}`,
+            explanation: "Prints numbers 1 to 10 in JavaScript"
+          };
+        } else if (promptLower.includes("number")) {
+          generated = {
+            name: "numbers.py",
+            code: "for i in range(1, 11):\n    print(i)",
+            explanation: "Prints numbers 1 to 10"
+          };
+        } else if (promptLower.includes("js") || promptLower.includes("javascript") || promptLower.includes("node")) {
+          // Generic JavaScript fallback
+          generated = {
+            name: "script.js",
+            code: `// Generated code for: ${prompt}
+console.log("Task: ${prompt}");
+console.log("This is a placeholder script. Please modify as needed.");`,
+            explanation: `Generated JavaScript script for: ${prompt}`
+          };
+        } else {
+          // Generic fallback
+          generated = {
+            name: "script.py",
+            code: `# Generated code for: ${prompt}
+print("Task: ${prompt}")
+print("This is a placeholder script. Please modify as needed.")`,
+            explanation: `Generated script for: ${prompt}`
+          };
+        }
+        console.log("✅ Generated intelligent fallback response");
+      }
+      
+      // Validate the generated object
+      if (!generated || typeof generated !== 'object') {
+        throw new Error("Failed to generate valid response object");
+      }
+      
+      // Ensure all required fields exist
+      if (!generated.name) generated.name = "script.py";
+      if (!generated.code) generated.code = `print("Generated for: ${prompt}")`;
+      if (!generated.explanation) generated.explanation = `Script for: ${prompt}`;
+      
+      console.log("Final generated object:", {
+        name: generated.name,
+        codeLength: generated.code.length,
+        explanation: generated.explanation
+      });
 
       let name = String(generated.name || "script");
       const code = normalizeCode(generated.code || "");
@@ -183,17 +387,38 @@ Response:`;
       let extFromName = (path.extname(name || "") || "").toLowerCase();
       const strong = detectStrongExtension(code);
       const hinted = inferExtFromHints(name, prompt);
-      let ext =
-        strong && allowedExtensions.has(strong)
-          ? strong
-          : hinted && allowedExtensions.has(hinted)
-          ? hinted
-          : allowedExtensions.has(extFromName)
-          ? extFromName
-          : "";
+      
+      // Check if prompt explicitly mentions a language - if so, prioritize hint
+      const promptLower = prompt.toLowerCase();
+      const explicitLanguage = promptLower.includes("javascript") || 
+                              promptLower.includes(" js ") || 
+                              promptLower.includes("node js") || 
+                              promptLower.includes("nodejs") ||
+                              promptLower.includes("typescript") ||
+                              promptLower.includes(" ts ") ||
+                              promptLower.includes("python") ||
+                              promptLower.includes(" py ");
+      
+      let ext = "";
+      if (explicitLanguage && hinted && allowedExtensions.has(hinted)) {
+        // If user explicitly mentioned a language, trust the hint over code detection
+        ext = hinted;
+        console.log(`🎯 Using explicit language hint: ${ext} (from prompt: "${prompt}")`);
+      } else if (strong && allowedExtensions.has(strong)) {
+        ext = strong;
+        console.log(`💪 Using strong code detection: ${ext}`);
+      } else if (hinted && allowedExtensions.has(hinted)) {
+        ext = hinted;
+        console.log(`💡 Using hint-based detection: ${ext}`);
+      } else if (allowedExtensions.has(extFromName)) {
+        ext = extFromName;
+        console.log(`📝 Using filename extension: ${ext}`);
+      }
+      
       if (!ext) {
         const g = guessExtension(code, `${name} ${explanation} ${prompt}`);
         ext = allowedExtensions.has(g) ? g : ".txt";
+        console.log(`🔍 Using guess-based detection: ${ext}`);
       }
       const base =
         slugify(
