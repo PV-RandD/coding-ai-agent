@@ -14,12 +14,14 @@
     "build:webpack": "npm run build:main && npm run build:preload",
     "build": "npm run build:ui && electron-builder",
     "build:deb": "npm run build:ui && electron-builder --linux deb",
-    "build:linux": "npm run build:ui && electron-builder --linux"
+    "build:linux": "npm run build:ui && electron-builder --linux",
+    "postinstall": "mkdir -p dist/server && cp node_modules/@tetherto/qvac-sdk/dist/server/worker.js dist/server/worker.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "LLM Desktop Team",
   "license": "ISC",
-  "description": "",
+  "homepage": "https://github.com/llm-desktop/app",
+  "description": "AI-powered desktop application for conversations and document processing",
   "devDependencies": {
     "concurrently": "^9.2.1",
     "electron": "^38.0.0",
@@ -56,6 +58,7 @@
       "**/*"
     ],
     "asarUnpack": [
+      "node_modules/@tetherto/qvac-sdk/dist/server/worker.js",
       "node_modules/@tetherto/qvac-sdk/**/*",
       "node_modules/bare-runtime-linux-x64/**/*"
     ],

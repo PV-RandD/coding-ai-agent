@@ -5,7 +5,7 @@ const fs = require("fs");
 const { getStorageDir, loadIndex } = require("./storage");
 const { scriptsRouter } = require("./routes/scripts");
 const { aiRouter } = require("./routes/ai");
-const { loadModel, completion } = require("@tetherto/qvac-sdk");
+const { loadModel, completion, QWEN3_1_7B_Q4_0 } = require("@tetherto/qvac-sdk");
 
 // Best available model from your collection - Qwen 3 4B Q4
 const DEFAULT_MODEL_URL =
@@ -14,15 +14,12 @@ const DEFAULT_MODEL_URL =
 async function initializeQvacClient() {
   try {
     console.log("Loading QVAC model...");
-    const modelId = await loadModel(DEFAULT_MODEL_URL, {
+    const modelId = await loadModel(QWEN3_1_7B_Q4_0, { 
       modelType: "llm",
       modelConfig: { 
-        ctx_size: 8192,
-        temperature: 0.1,
-        top_p: 0.9,
-        top_k: 40,
-        repeat_penalty: 1.1,
-        n_predict: 512
+          ctx_size: 1024,
+          gpu_layers: 0,
+          device: 'cpu'
       },
       onProgress: (p) => {
         console.log(`QVAC Model loading progress: ${p?.percentage ?? 0}%`);

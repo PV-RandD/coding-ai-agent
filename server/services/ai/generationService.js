@@ -119,40 +119,6 @@ JSON response:`;
     }
   }
 
-  // Strategy 6: intelligent fallback
-  if (!generated) {
-    const p = prompt.toLowerCase();
-    if (p.includes("crud") && (p.includes("js") || p.includes("javascript") || p.includes("node"))) {
-      generated = {
-        name: "crud.js",
-        code: `// Simple CRUD operations in JavaScript\nlet items = [];\nlet nextId = 1;\n\nfunction create(name, description) {\n    const item = { id: nextId++, name, description };\n    items.push(item);\n    return item;\n}\n\nfunction read() {\n    return items;\n}\n\nfunction update(id, name, description) {\n    const item = items.find(item => item.id === id);\n    if (item) {\n        if (name !== undefined) item.name = name;\n        if (description !== undefined) item.description = description;\n        return item;\n    }\n    return null;\n}\n\nfunction deleteItem(id) {\n    const index = items.findIndex(item => item.id === id);\n    if (index !== -1) {\n        return items.splice(index, 1)[0];\n    }\n    return null;\n}\n\nconsole.log('Creating items...');\ncreate("Task 1", "First task");\ncreate("Task 2", "Second task");\nconsole.log("All items:", read());\n\nconsole.log('Updating item...');\nupdate(1, undefined, "Updated first task");\nconsole.log("After update:", read());\n\nconsole.log('Deleting item...');\ndeleteItem(2);\nconsole.log("After delete:", read());`,
-        explanation: "Simple CRUD (Create, Read, Update, Delete) operations with JavaScript",
-      };
-    } else if (p.includes("crud")) {
-      generated = {
-        name: "crud.py",
-        code: `# Simple CRUD operations\nitems = []\n\ndef create(name, description):\n    item = {'id': len(items) + 1, 'name': name, 'description': description}\n    items.append(item)\n    return item\n\ndef read():\n    return items\n\ndef update(item_id, name=None, description=None):\n    for item in items:\n        if item['id'] == item_id:\n            if name: item['name'] = name\n            if description: item['description'] = description\n            return item\n    return None\n\ndef delete(item_id):\n    global items\n    items = [item for item in items if item['id'] != item_id]\n\nif __name__ == "__main__":\n    create("Task 1", "First task")\n    create("Task 2", "Second task")\n    print("All items:", read())\n    update(1, description="Updated first task")\n    print("After update:", read())\n    delete(2)\n    print("After delete:", read())`,
-        explanation: "Simple CRUD (Create, Read, Update, Delete) operations with Python",
-      };
-    } else if (p.includes("hello") && (p.includes("js") || p.includes("javascript") || p.includes("node"))) {
-      generated = { name: "hello.js", code: "console.log('Hello World!');", explanation: "Simple hello world program in JavaScript" };
-    } else if (p.includes("hello")) {
-      generated = { name: "hello.py", code: "print('Hello World!')", explanation: "Simple hello world program" };
-    } else if ((p.includes("alphabet") || p.includes("a to z")) && (p.includes("js") || p.includes("javascript") || p.includes("node"))) {
-      generated = { name: "alphabet.js", code: `// Print alphabet from a to z\nfor (let i = 0; i < 26; i++) {\n    console.log(String.fromCharCode(97 + i));\n}`, explanation: "Prints alphabet from a to z in JavaScript" };
-    } else if (p.includes("alphabet") || p.includes("a to z")) {
-      generated = { name: "alphabet.py", code: "for i in range(26):\n    print(chr(ord('a') + i))", explanation: "Prints alphabet from a to z" };
-    } else if (p.includes("number") && (p.includes("js") || p.includes("javascript") || p.includes("node"))) {
-      generated = { name: "numbers.js", code: `// Print numbers 1 to 10\nfor (let i = 1; i <= 10; i++) {\n    console.log(i);\n}`, explanation: "Prints numbers 1 to 10 in JavaScript" };
-    } else if (p.includes("number")) {
-      generated = { name: "numbers.py", code: "for i in range(1, 11):\n    print(i)", explanation: "Prints numbers 1 to 10" };
-    } else if (p.includes("js") || p.includes("javascript") || p.includes("node")) {
-      generated = { name: "script.js", code: `// Generated code for: ${prompt}\nconsole.log("Task: ${prompt}");\nconsole.log("This is a placeholder script. Please modify as needed.");`, explanation: `Generated JavaScript script for: ${prompt}` };
-    } else {
-      generated = { name: "script.py", code: `# Generated code for: ${prompt}\nprint("Task: ${prompt}")\nprint("This is a placeholder script. Please modify as needed.")`, explanation: `Generated script for: ${prompt}` };
-    }
-  }
-
   if (!generated || typeof generated !== "object") {
     throw new Error("Failed to generate valid response object");
   }
