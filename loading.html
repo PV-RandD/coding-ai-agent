@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -79,9 +80,17 @@
         }
 
         @keyframes loading {
-            0% { transform: scaleX(0.1); }
-            50% { transform: scaleX(0.8); }
-            100% { transform: scaleX(0.1); }
+            0% {
+                transform: scaleX(0.1);
+            }
+
+            50% {
+                transform: scaleX(0.8);
+            }
+
+            100% {
+                transform: scaleX(0.1);
+            }
         }
 
         .spinner {
@@ -95,8 +104,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .status-text {
@@ -110,17 +124,32 @@
         }
 
         @keyframes dots {
-            0%, 20% { content: ''; }
-            40% { content: '.'; }
-            60% { content: '..'; }
-            80%, 100% { content: '...'; }
+
+            0%,
+            20% {
+                content: '';
+            }
+
+            40% {
+                content: '.';
+            }
+
+            60% {
+                content: '..';
+            }
+
+            80%,
+            100% {
+                content: '...';
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="loading-container">
         <div class="logo">
-            LLM Desktop
+            Qubion
         </div>
         <div class="loading-text">Initializing QVAC AI Engine</div>
         <div class="spinner"></div>
@@ -140,14 +169,15 @@
             'Preparing language processing...',
             'Almost ready...'
         ];
-        
+
         let messageIndex = 0;
         const statusElement = document.querySelector('.status-text');
-        
+
         setInterval(() => {
             messageIndex = (messageIndex + 1) % statusMessages.length;
             statusElement.innerHTML = statusMessages[messageIndex] + '<span class="dots"></span>';
         }, 2000);
     </script>
 </body>
+
 </html>

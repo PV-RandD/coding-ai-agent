@@ -18,7 +18,7 @@
     "postinstall": "mkdir -p dist/server && cp node_modules/@tetherto/qvac-sdk/dist/server/worker.js dist/server/worker.js"
   },
   "keywords": [],
-  "author": "LLM Desktop Team",
+  "author": "Qubion Team",
   "license": "ISC",
   "homepage": "https://github.com/llm-desktop/app",
   "description": "AI-powered desktop application for conversations and document processing",
@@ -54,7 +54,7 @@
   },
   "build": {
     "appId": "com.llm-desktop.app",
-    "productName": "LLM Desktop",
+    "productName": "Qubion",
     "directories": {
       "output": "dist"
     },
@@ -94,8 +94,8 @@
       ],
       "icon": "assets/icon.png",
       "category": "Development",
-      "maintainer": "LLM Desktop Team",
-      "vendor": "LLM Desktop",
+      "maintainer": "Qubion Team",
+      "vendor": "Qubion",
       "synopsis": "AI-powered desktop application",
       "description": "A desktop application for AI-powered conversations and document processing",
       "asarUnpack": [

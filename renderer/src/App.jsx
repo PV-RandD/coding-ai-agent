@@ -187,7 +187,7 @@ function App() {
       try {
         const content = await getScriptLog(selected._id);
         if (!cancelled) setRunOutput(content || "");
-      } catch {}
+      } catch { }
       timer = setTimeout(poll, 500);
     }
     if (isRunning && selected?._id) {
@@ -276,7 +276,7 @@ function App() {
       <div className="titlebar flex items-center justify-between px-3 py-2 border-b border-[var(--border)]">
         <div className="flex items-center gap-2 text-sm">
           <span className="logo-dot" />
-          <span className="font-semibold">LLM Desktop</span>
+          <span className="font-semibold">Qubion</span>
           <span className="muted">/ Scripts</span>
         </div>
         <div className="muted text-xs">
@@ -312,7 +312,7 @@ function App() {
                 const out = (resp.stdout || resp.stderr || resp.error || "").trim();
                 if (out)
                   setTermLines((prev) => [...prev, out]);
-              } catch {}
+              } catch { }
               await fetchList();
             }
           }}
@@ -342,9 +342,8 @@ function App() {
                 setIsRunning(true);
                 try {
                   const data = await runScript(selected._id);
-                  const out = `${data.stdout || ""}${
-                    data.stderr ? "\n---\n" + data.stderr : ""
-                  }`;
+                  const out = `${data.stdout || ""}${data.stderr ? "\n---\n" + data.stderr : ""
+                    }`;
                   const help =
                     Array.isArray(data.suggestions) && data.suggestions.length
                       ? "\n\nSuggestions:\n- " + data.suggestions.join("\n- ")

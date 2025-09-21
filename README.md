@@ -1,4 +1,4 @@
-# LLM Desktop - AI-Powered Code Assistant
+# Qubion - AI-Powered Code Assistant
 
 A powerful cross-platform Electron desktop application that combines local AI inference with an intuitive code editor. Built with **QVAC SDK** for offline AI capabilities, React + Vite for the UI, and an embedded Express server for script management. Generate, edit, and run scripts with the help of a locally-running AI assistant.
 
@@ -192,4 +192,4 @@ model updates handled separately from app updates
 
 ## 📄 License
 
-## MIT License - See [LICENSE](LICENSE) file for details.
+## MIT License - See [LICENSE](LICENSE) file for details
